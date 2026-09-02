@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pygame
 
-from duckov_game.application import GameSession
-from duckov_game.domain import LootItem, Player, WorldBounds
+from duckov_game.application import GameSession, RunStatus
+from duckov_game.domain import ExtractionZone, LootItem, Player, WorldBounds
 
 WINDOW_SIZE = (960, 540)
 WINDOW_TITLE = "Duckov Learning Project"
@@ -14,11 +14,14 @@ PLAY_AREA_COLOR = (46, 52, 64)
 PLAY_AREA_BORDER_COLOR = (100, 112, 132)
 PLAYER_COLOR = (245, 193, 66)
 LOOT_COLOR = (72, 201, 176)
+EXTRACTION_COLOR = (76, 156, 255)
+SUCCESS_COLOR = (143, 227, 136)
 TEXT_COLOR = (225, 230, 238)
 TARGET_FPS = 60
 PLAYER_SIZE = 32.0
 PLAYER_SPEED = 240.0
 LOOT_SIZE = 24.0
+EXTRACTION_SIZE = (64.0, 112.0)
 
 
 def _read_movement_direction(keys: pygame.key.ScancodeWrapper) -> tuple[int, int]:
@@ -63,6 +66,12 @@ def run(*, max_frames: int | None = None) -> int:
                 width=LOOT_SIZE,
                 height=LOOT_SIZE,
             ),
+            extraction_zone=ExtractionZone(
+                x=40,
+                y=(world_bounds.height - EXTRACTION_SIZE[1]) / 2,
+                width=EXTRACTION_SIZE[0],
+                height=EXTRACTION_SIZE[1],
+            ),
         )
         frame_count = 0
         running = True
@@ -86,6 +95,17 @@ def run(*, max_frames: int | None = None) -> int:
             )
             pygame.draw.rect(
                 screen,
+                EXTRACTION_COLOR,
+                pygame.Rect(
+                    round(session.extraction_zone.x),
+                    round(session.extraction_zone.y),
+                    round(session.extraction_zone.width),
+                    round(session.extraction_zone.height),
+                ),
+                width=4,
+            )
+            pygame.draw.rect(
+                screen,
                 PLAYER_COLOR,
                 pygame.Rect(
                     round(session.player.x),
@@ -106,7 +126,7 @@ def run(*, max_frames: int | None = None) -> int:
                     ),
                 )
             instructions = font.render(
-                "Move: WASD / Arrows | Touch green loot to collect",
+                "Collect green loot, then enter the blue extraction zone",
                 True,
                 TEXT_COLOR,
             )
@@ -115,6 +135,16 @@ def run(*, max_frames: int | None = None) -> int:
                 f"Carried items: {session.carried_item_count}", True, TEXT_COLOR
             )
             screen.blit(carried_text, (16, 48))
+            if session.status is RunStatus.EXTRACTED:
+                success_text = font.render(
+                    "EXTRACTION SUCCESS - close the window",
+                    True,
+                    SUCCESS_COLOR,
+                )
+                success_rect = success_text.get_rect(
+                    center=(WINDOW_SIZE[0] // 2, WINDOW_SIZE[1] // 2 - 48)
+                )
+                screen.blit(success_text, success_rect)
             pygame.display.flip()
 
             frame_count += 1
