@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import pygame
 
-from duckov_game.domain import Player, WorldBounds
+from duckov_game.application import GameSession
+from duckov_game.domain import LootItem, Player, WorldBounds
 
 WINDOW_SIZE = (960, 540)
 WINDOW_TITLE = "Duckov Learning Project"
@@ -12,10 +13,12 @@ BACKGROUND_COLOR = (28, 32, 40)
 PLAY_AREA_COLOR = (46, 52, 64)
 PLAY_AREA_BORDER_COLOR = (100, 112, 132)
 PLAYER_COLOR = (245, 193, 66)
+LOOT_COLOR = (72, 201, 176)
 TEXT_COLOR = (225, 230, 238)
 TARGET_FPS = 60
 PLAYER_SIZE = 32.0
 PLAYER_SPEED = 240.0
+LOOT_SIZE = 24.0
 
 
 def _read_movement_direction(keys: pygame.key.ScancodeWrapper) -> tuple[int, int]:
@@ -45,12 +48,21 @@ def run(*, max_frames: int | None = None) -> int:
         clock = pygame.time.Clock()
         font = pygame.font.Font(None, 28)
         world_bounds = WorldBounds(*WINDOW_SIZE)
-        player = Player(
-            x=(world_bounds.width - PLAYER_SIZE) / 2,
-            y=(world_bounds.height - PLAYER_SIZE) / 2,
-            width=PLAYER_SIZE,
-            height=PLAYER_SIZE,
-            speed=PLAYER_SPEED,
+        session = GameSession(
+            bounds=world_bounds,
+            player=Player(
+                x=(world_bounds.width - PLAYER_SIZE) / 2,
+                y=(world_bounds.height - PLAYER_SIZE) / 2,
+                width=PLAYER_SIZE,
+                height=PLAYER_SIZE,
+                speed=PLAYER_SPEED,
+            ),
+            loot_item=LootItem(
+                x=world_bounds.width * 0.75,
+                y=(world_bounds.height - LOOT_SIZE) / 2,
+                width=LOOT_SIZE,
+                height=LOOT_SIZE,
+            ),
         )
         frame_count = 0
         running = True
@@ -65,7 +77,7 @@ def run(*, max_frames: int | None = None) -> int:
             direction_x, direction_y = _read_movement_direction(
                 pygame.key.get_pressed()
             )
-            player.move(direction_x, direction_y, delta_seconds, world_bounds)
+            session.update(direction_x, direction_y, delta_seconds)
 
             screen.fill(BACKGROUND_COLOR)
             pygame.draw.rect(screen, PLAY_AREA_COLOR, screen.get_rect())
@@ -76,16 +88,33 @@ def run(*, max_frames: int | None = None) -> int:
                 screen,
                 PLAYER_COLOR,
                 pygame.Rect(
-                    round(player.x),
-                    round(player.y),
-                    round(player.width),
-                    round(player.height),
+                    round(session.player.x),
+                    round(session.player.y),
+                    round(session.player.width),
+                    round(session.player.height),
                 ),
             )
+            if not session.loot_item.is_collected:
+                pygame.draw.rect(
+                    screen,
+                    LOOT_COLOR,
+                    pygame.Rect(
+                        round(session.loot_item.x),
+                        round(session.loot_item.y),
+                        round(session.loot_item.width),
+                        round(session.loot_item.height),
+                    ),
+                )
             instructions = font.render(
-                "Move: WASD or Arrow Keys", True, TEXT_COLOR
+                "Move: WASD / Arrows | Touch green loot to collect",
+                True,
+                TEXT_COLOR,
             )
             screen.blit(instructions, (16, 16))
+            carried_text = font.render(
+                f"Carried items: {session.carried_item_count}", True, TEXT_COLOR
+            )
+            screen.blit(carried_text, (16, 48))
             pygame.display.flip()
 
             frame_count += 1

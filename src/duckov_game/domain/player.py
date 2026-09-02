@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from math import hypot
 
+from duckov_game.domain.geometry import Rectangle
+
 
 @dataclass(frozen=True, slots=True)
 class WorldBounds:
@@ -34,6 +36,10 @@ class Player:
         if self.speed < 0:
             raise ValueError("player speed cannot be negative")
 
+    @property
+    def hitbox(self) -> Rectangle:
+        return Rectangle(self.x, self.y, self.width, self.height)
+
     def move(
         self,
         direction_x: float,
@@ -56,4 +62,3 @@ class Player:
 
         self.x = min(max(self.x, 0.0), bounds.width - self.width)
         self.y = min(max(self.y, 0.0), bounds.height - self.height)
-

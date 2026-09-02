@@ -50,8 +50,12 @@
 
 - `src/duckov_game/app.py`：pygame 窗口生命周期和每帧事件循环。
 - `src/duckov_game/__main__.py`：命令行入口；测试可限制运行帧数。
+- `src/duckov_game/application/session.py`：当前一局的状态所有者，按“移动后拾取”的顺序组织规则。
+- `src/duckov_game/domain/geometry.py`：不依赖 pygame 的矩形碰撞规则。
+- `src/duckov_game/domain/item.py`：单个局内物品的位置和收集状态。
 - `src/duckov_game/domain/player.py`：玩家位置、速度、方向归一化和边界规则，不依赖 pygame。
 - `tests/test_app.py`：无显示设备的窗口冒烟测试和参数校验。
 - `tests/test_player.py`：移动速度、对角移动、地图边界和非法时间参数测试。
+- `tests/test_session.py`：物品碰撞、拾取和防止重复计数测试。
 
-当前领域层只包含玩家与矩形地图边界。物品、撤离和局外库存尚未实现。
+当前一局只包含一个玩家和一个物品。撤离和局外库存尚未实现。
