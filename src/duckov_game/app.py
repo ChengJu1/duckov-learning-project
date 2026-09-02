@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pygame
 
-from duckov_game.application import GameSession, RunStatus
+from duckov_game.application import Game, GameSession, RunStatus
 from duckov_game.domain import ExtractionZone, LootItem, Player, WorldBounds
 
 WINDOW_SIZE = (960, 540)
@@ -34,6 +34,31 @@ def _read_movement_direction(keys: pygame.key.ScancodeWrapper) -> tuple[int, int
     return direction_x, direction_y
 
 
+def _create_session(world_bounds: WorldBounds) -> GameSession:
+    return GameSession(
+        bounds=world_bounds,
+        player=Player(
+            x=(world_bounds.width - PLAYER_SIZE) / 2,
+            y=(world_bounds.height - PLAYER_SIZE) / 2,
+            width=PLAYER_SIZE,
+            height=PLAYER_SIZE,
+            speed=PLAYER_SPEED,
+        ),
+        loot_item=LootItem(
+            x=world_bounds.width * 0.75,
+            y=(world_bounds.height - LOOT_SIZE) / 2,
+            width=LOOT_SIZE,
+            height=LOOT_SIZE,
+        ),
+        extraction_zone=ExtractionZone(
+            x=40,
+            y=(world_bounds.height - EXTRACTION_SIZE[1]) / 2,
+            width=EXTRACTION_SIZE[0],
+            height=EXTRACTION_SIZE[1],
+        ),
+    )
+
+
 def run(*, max_frames: int | None = None) -> int:
     """Run the game window.
 
@@ -51,28 +76,7 @@ def run(*, max_frames: int | None = None) -> int:
         clock = pygame.time.Clock()
         font = pygame.font.Font(None, 28)
         world_bounds = WorldBounds(*WINDOW_SIZE)
-        session = GameSession(
-            bounds=world_bounds,
-            player=Player(
-                x=(world_bounds.width - PLAYER_SIZE) / 2,
-                y=(world_bounds.height - PLAYER_SIZE) / 2,
-                width=PLAYER_SIZE,
-                height=PLAYER_SIZE,
-                speed=PLAYER_SPEED,
-            ),
-            loot_item=LootItem(
-                x=world_bounds.width * 0.75,
-                y=(world_bounds.height - LOOT_SIZE) / 2,
-                width=LOOT_SIZE,
-                height=LOOT_SIZE,
-            ),
-            extraction_zone=ExtractionZone(
-                x=40,
-                y=(world_bounds.height - EXTRACTION_SIZE[1]) / 2,
-                width=EXTRACTION_SIZE[0],
-                height=EXTRACTION_SIZE[1],
-            ),
-        )
+        game = Game(session_factory=lambda: _create_session(world_bounds))
         frame_count = 0
         running = True
 
@@ -82,11 +86,14 @@ def run(*, max_frames: int | None = None) -> int:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_r:
+                    game.start_new_run()
 
             direction_x, direction_y = _read_movement_direction(
                 pygame.key.get_pressed()
             )
-            session.update(direction_x, direction_y, delta_seconds)
+            game.update(direction_x, direction_y, delta_seconds)
+            session = game.session
 
             screen.fill(BACKGROUND_COLOR)
             pygame.draw.rect(screen, PLAY_AREA_COLOR, screen.get_rect())
@@ -135,9 +142,13 @@ def run(*, max_frames: int | None = None) -> int:
                 f"Carried items: {session.carried_item_count}", True, TEXT_COLOR
             )
             screen.blit(carried_text, (16, 48))
+            stash_text = font.render(
+                f"Stash items: {game.stash_item_count}", True, TEXT_COLOR
+            )
+            screen.blit(stash_text, (16, 80))
             if session.status is RunStatus.EXTRACTED:
                 success_text = font.render(
-                    "EXTRACTION SUCCESS - close the window",
+                    "EXTRACTION SUCCESS - press R for a new run",
                     True,
                     SUCCESS_COLOR,
                 )
