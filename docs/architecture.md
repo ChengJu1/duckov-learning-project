@@ -16,15 +16,15 @@
 基础设施层（窗口、渲染、资源、存档）
 ```
 
-### `src/game/domain`
+### `src/duckov_game/domain`
 
 纯游戏规则和数据结构。不得直接导入渲染框架，便于单元测试。
 
-### `src/game/application`
+### `src/duckov_game/application`
 
 组织用例和状态流转，例如开始一局、处理拾取、撤离结算。
 
-### `src/game/infrastructure`
+### `src/duckov_game/app.py`
 
 窗口、输入、渲染、音频、资源加载和未来的存档实现。
 
@@ -50,6 +50,8 @@
 
 - `src/duckov_game/app.py`：pygame 窗口生命周期和每帧事件循环。
 - `src/duckov_game/__main__.py`：命令行入口；测试可限制运行帧数。
+- `src/duckov_game/domain/player.py`：玩家位置、速度、方向归一化和边界规则，不依赖 pygame。
 - `tests/test_app.py`：无显示设备的窗口冒烟测试和参数校验。
+- `tests/test_player.py`：移动速度、对角移动、地图边界和非法时间参数测试。
 
-当前还没有领域层对象。玩家、地图和撤离规则将在阶段 1 中逐个加入。
+当前领域层只包含玩家与矩形地图边界。物品、撤离和局外库存尚未实现。
