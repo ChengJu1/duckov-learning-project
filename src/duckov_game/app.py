@@ -14,6 +14,7 @@ PLAY_AREA_COLOR = (46, 52, 64)
 PLAY_AREA_BORDER_COLOR = (100, 112, 132)
 PLAYER_COLOR = (245, 193, 66)
 AIM_COLOR = (255, 239, 170)
+PROJECTILE_COLOR = (255, 246, 205)
 LOOT_COLOR = (72, 201, 176)
 EXTRACTION_COLOR = (76, 156, 255)
 SUCCESS_COLOR = (143, 227, 136)
@@ -84,12 +85,15 @@ def run(*, max_frames: int | None = None) -> int:
 
         while running:
             delta_seconds = clock.tick(TARGET_FPS) / 1000.0
+            fire_requested = False
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_r:
                     game.start_new_run()
+                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    fire_requested = True
 
             direction_x, direction_y = _read_movement_direction(
                 pygame.key.get_pressed()
@@ -99,6 +103,7 @@ def run(*, max_frames: int | None = None) -> int:
                 direction_y,
                 delta_seconds,
                 aim_target=pygame.mouse.get_pos(),
+                fire_requested=fire_requested,
             )
             session = game.session
 
@@ -139,6 +144,13 @@ def run(*, max_frames: int | None = None) -> int:
                 ),
                 width=4,
             )
+            for projectile in session.projectiles:
+                pygame.draw.circle(
+                    screen,
+                    PROJECTILE_COLOR,
+                    (round(projectile.x), round(projectile.y)),
+                    round(projectile.radius),
+                )
             if not session.loot_item.is_collected:
                 pygame.draw.rect(
                     screen,
@@ -151,7 +163,7 @@ def run(*, max_frames: int | None = None) -> int:
                     ),
                 )
             instructions = font.render(
-                "Collect green loot, then enter the blue extraction zone",
+                "WASD move | Mouse aim | Left click fire | Collect then extract",
                 True,
                 TEXT_COLOR,
             )

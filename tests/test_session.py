@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from duckov_game.application import GameSession, RunStatus
 from duckov_game.domain import ExtractionZone, LootItem, Player, WorldBounds
 
@@ -91,3 +93,42 @@ def test_extracted_run_no_longer_changes() -> None:
     assert (session.player.x, session.player.y) == position_at_extraction
     assert session.loot_item.is_collected is True
     assert session.carried_item_count == 1
+
+
+def test_fire_request_creates_one_projectile_along_current_aim() -> None:
+    session = make_session()
+
+    session.update(0, 0, 0, aim_target=(5, 100), fire_requested=True)
+
+    assert len(session.projectiles) == 1
+    projectile = session.projectiles[0]
+    assert (projectile.x, projectile.y) == (5, 15)
+    assert projectile.direction_x == pytest.approx(0)
+    assert projectile.direction_y == pytest.approx(1)
+
+
+def test_no_fire_request_does_not_create_projectile() -> None:
+    session = make_session()
+
+    session.update(0, 0, 0)
+
+    assert session.projectiles == []
+
+
+def test_projectile_moves_and_is_removed_after_leaving_world() -> None:
+    session = make_session()
+    session.update(0, 0, 0, fire_requested=True)
+
+    session.update(0, 0, 1)
+
+    assert session.projectiles == []
+
+
+def test_extracted_run_cannot_fire_projectiles() -> None:
+    session = make_session(player_x=150, loot_x=150, extraction_x=150)
+    session.update(0, 0, 0)
+
+    session.update(0, 0, 0, fire_requested=True)
+
+    assert session.status is RunStatus.EXTRACTED
+    assert session.projectiles == []

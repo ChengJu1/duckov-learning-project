@@ -51,16 +51,18 @@
 - `src/duckov_game/app.py`：pygame 窗口生命周期和每帧事件循环。
 - `src/duckov_game/__main__.py`：命令行入口；测试可限制运行帧数。
 - `src/duckov_game/application/game.py`：跨局状态所有者；负责一次性结算、stash 和创建新局。
-- `src/duckov_game/application/session.py`：单局状态所有者，固定执行移动、拾取和撤离判定；撤离后冻结状态。
+- `src/duckov_game/application/session.py`：单局状态所有者，固定执行移动、瞄准、发射、弹丸更新、拾取和撤离判定；撤离后冻结状态。
 - `src/duckov_game/domain/extraction.py`：撤离区域的数据与碰撞范围。
 - `src/duckov_game/domain/geometry.py`：不依赖 pygame 的矩形碰撞规则。
 - `src/duckov_game/domain/item.py`：单个局内物品的位置和收集状态。
 - `src/duckov_game/domain/player.py`：玩家位置、移动与瞄准方向归一化、边界规则，不依赖 pygame。
+- `src/duckov_game/domain/projectile.py`：弹丸方向归一化、移动和地图边界相交规则。
 - `tests/test_app.py`：无显示设备的窗口冒烟测试和参数校验。
 - `tests/test_game.py`：撤离结算去重、新局重建和 stash 保留测试。
 - `tests/test_player.py`：移动速度、对角移动、瞄准方向、地图边界和非法时间参数测试。
-- `tests/test_session.py`：物品拾取、撤离条件和结束后状态冻结测试。
+- `tests/test_projectile.py`：弹丸方向、定速移动、边界清理条件和非法参数测试。
+- `tests/test_session.py`：物品拾取、撤离条件、弹丸生命周期和结束后状态冻结测试。
 
 `Game` 的生命周期跨越多局，`GameSession` 每次按 `R` 后整体替换。这样局外库存被保留，而玩家、物品、携带数和撤离状态天然恢复初始值。
 
-pygame 层只读取鼠标坐标并绘制固定长度的瞄准线；玩家中心到目标点的单位方向由领域层计算。目标恰好位于玩家中心时保留上一次方向，避免产生无效的零向量。
+pygame 层只读取鼠标坐标与左键事件，并绘制瞄准线和弹丸；玩家中心到目标点的单位方向、弹丸生成、定速移动与地图外清理由领域层和应用层处理。目标恰好位于玩家中心时保留上一次方向，避免产生无效的零向量。

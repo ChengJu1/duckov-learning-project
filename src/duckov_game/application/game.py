@@ -30,6 +30,7 @@ class Game:
         delta_seconds: float,
         *,
         aim_target: tuple[float, float] | None = None,
+        fire_requested: bool = False,
     ) -> None:
         """Advance the current run and settle a new extraction once."""
 
@@ -39,6 +40,7 @@ class Game:
             direction_y,
             delta_seconds,
             aim_target=aim_target,
+            fire_requested=fire_requested,
         )
 
         if (

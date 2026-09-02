@@ -2,10 +2,16 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum, auto
 
-from duckov_game.domain import ExtractionZone, LootItem, Player, WorldBounds
+from duckov_game.domain import (
+    ExtractionZone,
+    LootItem,
+    Player,
+    Projectile,
+    WorldBounds,
+)
 
 
 class RunStatus(Enum):
@@ -21,6 +27,7 @@ class GameSession:
     player: Player
     loot_item: LootItem
     extraction_zone: ExtractionZone
+    projectiles: list[Projectile] = field(default_factory=list)
     carried_item_count: int = 0
     status: RunStatus = RunStatus.ACTIVE
 
@@ -31,6 +38,7 @@ class GameSession:
         delta_seconds: float,
         *,
         aim_target: tuple[float, float] | None = None,
+        fire_requested: bool = False,
     ) -> None:
         """Advance movement, pickup, and extraction in a fixed order."""
 
@@ -40,6 +48,24 @@ class GameSession:
         self.player.move(direction_x, direction_y, delta_seconds, self.bounds)
         if aim_target is not None:
             self.player.aim_at(*aim_target)
+        if fire_requested:
+            center_x, center_y = self.player.center
+            self.projectiles.append(
+                Projectile(
+                    x=center_x,
+                    y=center_y,
+                    direction_x=self.player.aim_x,
+                    direction_y=self.player.aim_y,
+                )
+            )
+
+        for projectile in self.projectiles:
+            projectile.move(delta_seconds)
+        self.projectiles = [
+            projectile
+            for projectile in self.projectiles
+            if projectile.intersects(self.bounds)
+        ]
 
         if (
             not self.loot_item.is_collected
