@@ -52,3 +52,29 @@ def test_negative_delta_time_is_rejected() -> None:
     with pytest.raises(ValueError, match="cannot be negative"):
         player.move(1, 0, -0.1, WorldBounds(100, 100))
 
+
+def test_player_aims_from_center_toward_target() -> None:
+    player = Player(x=10, y=20, width=20, height=10)
+
+    player.aim_at(20, 5)
+
+    assert player.aim_x == pytest.approx(0)
+    assert player.aim_y == pytest.approx(-1)
+
+
+def test_diagonal_aim_direction_is_normalized() -> None:
+    player = Player(x=0, y=0, width=10, height=10)
+
+    player.aim_at(15, 15)
+
+    assert player.aim_x == pytest.approx(1 / 2**0.5)
+    assert player.aim_y == pytest.approx(1 / 2**0.5)
+    assert player.aim_x**2 + player.aim_y**2 == pytest.approx(1)
+
+
+def test_aiming_at_player_center_keeps_previous_direction() -> None:
+    player = Player(x=10, y=20, width=20, height=10, aim_x=0, aim_y=-1)
+
+    player.aim_at(*player.center)
+
+    assert (player.aim_x, player.aim_y) == (0, -1)

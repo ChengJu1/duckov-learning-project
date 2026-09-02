@@ -29,16 +29,41 @@ class Player:
     width: float = 32.0
     height: float = 32.0
     speed: float = 240.0
+    aim_x: float = 1.0
+    aim_y: float = 0.0
 
     def __post_init__(self) -> None:
         if self.width <= 0 or self.height <= 0:
             raise ValueError("player size must be positive")
         if self.speed < 0:
             raise ValueError("player speed cannot be negative")
+        aim_length = hypot(self.aim_x, self.aim_y)
+        if aim_length == 0:
+            raise ValueError("initial aim direction cannot be zero")
+        self.aim_x /= aim_length
+        self.aim_y /= aim_length
 
     @property
     def hitbox(self) -> Rectangle:
         return Rectangle(self.x, self.y, self.width, self.height)
+
+    @property
+    def center(self) -> tuple[float, float]:
+        return self.x + self.width / 2, self.y + self.height / 2
+
+    def aim_at(self, target_x: float, target_y: float) -> None:
+        """Aim from the player's center toward a target position."""
+
+        center_x, center_y = self.center
+        direction_x = target_x - center_x
+        direction_y = target_y - center_y
+        direction_length = hypot(direction_x, direction_y)
+
+        if direction_length == 0:
+            return
+
+        self.aim_x = direction_x / direction_length
+        self.aim_y = direction_y / direction_length
 
     def move(
         self,

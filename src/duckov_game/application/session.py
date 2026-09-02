@@ -29,6 +29,8 @@ class GameSession:
         direction_x: float,
         direction_y: float,
         delta_seconds: float,
+        *,
+        aim_target: tuple[float, float] | None = None,
     ) -> None:
         """Advance movement, pickup, and extraction in a fixed order."""
 
@@ -36,6 +38,8 @@ class GameSession:
             return
 
         self.player.move(direction_x, direction_y, delta_seconds, self.bounds)
+        if aim_target is not None:
+            self.player.aim_at(*aim_target)
 
         if (
             not self.loot_item.is_collected

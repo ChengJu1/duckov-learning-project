@@ -13,6 +13,7 @@ BACKGROUND_COLOR = (28, 32, 40)
 PLAY_AREA_COLOR = (46, 52, 64)
 PLAY_AREA_BORDER_COLOR = (100, 112, 132)
 PLAYER_COLOR = (245, 193, 66)
+AIM_COLOR = (255, 239, 170)
 LOOT_COLOR = (72, 201, 176)
 EXTRACTION_COLOR = (76, 156, 255)
 SUCCESS_COLOR = (143, 227, 136)
@@ -22,6 +23,7 @@ PLAYER_SIZE = 32.0
 PLAYER_SPEED = 240.0
 LOOT_SIZE = 24.0
 EXTRACTION_SIZE = (64.0, 112.0)
+AIM_LINE_LENGTH = 48.0
 
 
 def _read_movement_direction(keys: pygame.key.ScancodeWrapper) -> tuple[int, int]:
@@ -92,7 +94,12 @@ def run(*, max_frames: int | None = None) -> int:
             direction_x, direction_y = _read_movement_direction(
                 pygame.key.get_pressed()
             )
-            game.update(direction_x, direction_y, delta_seconds)
+            game.update(
+                direction_x,
+                direction_y,
+                delta_seconds,
+                aim_target=pygame.mouse.get_pos(),
+            )
             session = game.session
 
             screen.fill(BACKGROUND_COLOR)
@@ -120,6 +127,17 @@ def run(*, max_frames: int | None = None) -> int:
                     round(session.player.width),
                     round(session.player.height),
                 ),
+            )
+            player_center_x, player_center_y = session.player.center
+            pygame.draw.line(
+                screen,
+                AIM_COLOR,
+                (round(player_center_x), round(player_center_y)),
+                (
+                    round(player_center_x + session.player.aim_x * AIM_LINE_LENGTH),
+                    round(player_center_y + session.player.aim_y * AIM_LINE_LENGTH),
+                ),
+                width=4,
             )
             if not session.loot_item.is_collected:
                 pygame.draw.rect(

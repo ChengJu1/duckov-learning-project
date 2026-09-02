@@ -55,10 +55,12 @@
 - `src/duckov_game/domain/extraction.py`：撤离区域的数据与碰撞范围。
 - `src/duckov_game/domain/geometry.py`：不依赖 pygame 的矩形碰撞规则。
 - `src/duckov_game/domain/item.py`：单个局内物品的位置和收集状态。
-- `src/duckov_game/domain/player.py`：玩家位置、速度、方向归一化和边界规则，不依赖 pygame。
+- `src/duckov_game/domain/player.py`：玩家位置、移动与瞄准方向归一化、边界规则，不依赖 pygame。
 - `tests/test_app.py`：无显示设备的窗口冒烟测试和参数校验。
 - `tests/test_game.py`：撤离结算去重、新局重建和 stash 保留测试。
-- `tests/test_player.py`：移动速度、对角移动、地图边界和非法时间参数测试。
+- `tests/test_player.py`：移动速度、对角移动、瞄准方向、地图边界和非法时间参数测试。
 - `tests/test_session.py`：物品拾取、撤离条件和结束后状态冻结测试。
 
 `Game` 的生命周期跨越多局，`GameSession` 每次按 `R` 后整体替换。这样局外库存被保留，而玩家、物品、携带数和撤离状态天然恢复初始值。
+
+pygame 层只读取鼠标坐标并绘制固定长度的瞄准线；玩家中心到目标点的单位方向由领域层计算。目标恰好位于玩家中心时保留上一次方向，避免产生无效的零向量。

@@ -9,6 +9,7 @@ from duckov_game.application.session import GameSession, RunStatus
 
 SessionFactory = Callable[[], GameSession]
 
+
 @dataclass(slots=True)
 class Game:
     """Own persistent progression and the current run."""
@@ -27,11 +28,18 @@ class Game:
         direction_x: float,
         direction_y: float,
         delta_seconds: float,
+        *,
+        aim_target: tuple[float, float] | None = None,
     ) -> None:
         """Advance the current run and settle a new extraction once."""
 
         previous_status = self.session.status
-        self.session.update(direction_x, direction_y, delta_seconds)
+        self.session.update(
+            direction_x,
+            direction_y,
+            delta_seconds,
+            aim_target=aim_target,
+        )
 
         if (
             previous_status is RunStatus.ACTIVE
