@@ -23,3 +23,5 @@ logs/
 saves/
 *.log
 
+# Keep real AI failure cases local; only the template is versioned
+docs/ai-failures/[0-9][0-9][0-9][0-9]-*.md
