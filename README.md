@@ -4,7 +4,7 @@
 
 ## 当前状态
 
-项目处于阶段 0：仓库与基础文档已建立，正在准备 Python 开发环境。当前不直接生成完整游戏。
+阶段 0 已完成：仓库、Python 环境与第一个可运行窗口均已验证。项目准备进入阶段 1 的无战斗撤离原型。
 
 ## 最小可玩循环（暂定）
 
@@ -38,12 +38,34 @@
 ## 开发环境
 
 - 目标平台：Windows
-- 主要语言：Python（游戏引擎尚未最终确定）
-- 当前已知环境：Git 与 GitHub 同步已验证；Python 尚未安装或尚未加入 PATH
+- Python：3.14.7
+- 游戏框架：pygame-ce 2.5.8
+- 测试框架：pytest 9.1.1
+- Git 与 GitHub 同步已验证
+
+## 本地运行
+
+首次进入项目时创建虚拟环境并安装依赖：
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --editable ".[dev]"
+```
+
+启动当前窗口原型：
+
+```powershell
+.\.venv\Scripts\python.exe -m duckov_game
+```
+
+运行自动化测试：
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest
+```
 
 ## 下一步
 
-1. 安装并验证 Python。
-2. 确认第一阶段采用的 Python 游戏框架或引擎。
-3. 创建第一个可运行窗口和对应的启动验证。
-
+1. 定义玩家位置、速度和地图边界的数据结构。
+2. 实现键盘移动，但暂不加入物品或撤离逻辑。
+3. 为移动和边界规则添加不依赖画面的自动化测试。
