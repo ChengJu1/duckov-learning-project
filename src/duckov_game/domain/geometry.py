@@ -36,3 +36,24 @@ class Rectangle:
             and self.bottom > other.y
         )
 
+    def intersects_segment(
+        self, start: tuple[float, float], end: tuple[float, float]
+    ) -> bool:
+        """Clip a segment to both axes; touching the boundary counts as a hit."""
+
+        enter, leave = 0.0, 1.0
+        for origin, destination, lower, upper in (
+            (start[0], end[0], self.x, self.right),
+            (start[1], end[1], self.y, self.bottom),
+        ):
+            delta = destination - origin
+            if delta == 0:
+                if not lower <= origin <= upper:
+                    return False
+                continue
+            first, last = sorted(((lower - origin) / delta, (upper - origin) / delta))
+            enter = max(enter, first)
+            leave = min(leave, last)
+            if enter > leave:
+                return False
+        return True

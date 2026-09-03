@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 
 from duckov_game.domain import (
+    Enemy,
     ExtractionZone,
     LootItem,
     Player,
@@ -30,6 +31,7 @@ class GameSession:
     projectiles: list[Projectile] = field(default_factory=list)
     carried_item_count: int = 0
     status: RunStatus = RunStatus.ACTIVE
+    enemy: Enemy | None = None
 
     def update(
         self,
@@ -40,7 +42,7 @@ class GameSession:
         aim_target: tuple[float, float] | None = None,
         fire_requested: bool = False,
     ) -> None:
-        """Advance movement, pickup, and extraction in a fixed order."""
+        """Advance movement, combat, pickup, and extraction in a fixed order."""
 
         if self.status is not RunStatus.ACTIVE:
             return
@@ -59,13 +61,20 @@ class GameSession:
                 )
             )
 
+        remaining_projectiles = []
         for projectile in self.projectiles:
+            start = (projectile.x, projectile.y)
             projectile.move(delta_seconds)
-        self.projectiles = [
-            projectile
-            for projectile in self.projectiles
-            if projectile.intersects(self.bounds)
-        ]
+            if (
+                self.enemy is not None
+                and self.enemy.health.is_alive
+                and projectile.hits(self.enemy.hitbox, start)
+            ):
+                self.enemy.health.take_damage(projectile.damage)
+                continue
+            if projectile.intersects(self.bounds):
+                remaining_projectiles.append(projectile)
+        self.projectiles = remaining_projectiles
 
         if (
             not self.loot_item.is_collected

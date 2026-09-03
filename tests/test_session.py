@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from duckov_game.application import GameSession, RunStatus
-from duckov_game.domain import ExtractionZone, LootItem, Player, WorldBounds
+from duckov_game.domain import Enemy, ExtractionZone, LootItem, Player, Projectile, WorldBounds
 
 
 def make_session(
@@ -132,3 +132,63 @@ def test_extracted_run_cannot_fire_projectiles() -> None:
 
     assert session.status is RunStatus.EXTRACTED
     assert session.projectiles == []
+
+
+def test_hit_consumes_projectile_and_deals_damage_only_once() -> None:
+    session = make_session()
+    session.enemy = Enemy(100, 10, width=10, height=10)
+    session.update(0, 0, 0.2, aim_target=(105, 15), fire_requested=True)
+    assert session.enemy.health.current == 75
+    assert session.projectiles == []
+    session.update(0, 0, 0.2)
+    assert session.enemy.health.current == 75
+
+
+def test_projectile_hits_before_out_of_bounds_cleanup_even_during_long_frame() -> None:
+    session = make_session()
+    session.enemy = Enemy(100, 10)
+    session.update(0, 0, 1, fire_requested=True)
+    assert session.enemy.health.current == 75
+    assert session.projectiles == []
+
+
+def test_miss_does_not_damage_enemy() -> None:
+    session = make_session()
+    session.enemy = Enemy(100, 50)
+    session.update(0, 0, 0.2, fire_requested=True)
+    assert session.enemy.health.current == 100
+    assert len(session.projectiles) == 1
+
+
+def test_four_hits_defeat_enemy_and_dead_enemy_does_not_absorb_shots() -> None:
+    session = make_session()
+    session.enemy = Enemy(100, 10)
+    for expected_hp in (75, 50, 25, 0):
+        session.update(0, 0, 0.2, fire_requested=True)
+        assert session.enemy.health.current == expected_hp
+        assert session.projectiles == []
+    session.update(0, 0, 0.2, fire_requested=True)
+    assert not session.enemy.health.is_alive
+    assert len(session.projectiles) == 1
+
+
+def test_same_frame_hits_stop_at_death() -> None:
+    session = make_session()
+    session.enemy = Enemy(100, 10)
+    session.enemy.health.take_damage(75)
+    session.projectiles = [Projectile(5, 15, 1, 0), Projectile(5, 15, 1, 0)]
+    session.update(0, 0, 0.2)
+    assert session.enemy.health.current == 0
+    assert len(session.projectiles) == 1
+
+
+def test_live_enemy_does_not_block_extraction_and_combat_freezes_afterward() -> None:
+    session = make_session(player_x=150, loot_x=150, extraction_x=150)
+    session.enemy = Enemy(100, 10)
+    session.projectiles = [Projectile(5, 15, 1, 0)]
+    session.update(0, 0, 0)
+    assert session.status is RunStatus.EXTRACTED
+    session.update(0, 0, 1, fire_requested=True)
+    assert session.enemy.health.current == 100
+    assert len(session.projectiles) == 1
+    assert session.projectiles[0].x == 5

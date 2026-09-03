@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from duckov_game.application import Game, GameSession, RunStatus
-from duckov_game.domain import ExtractionZone, LootItem, Player, WorldBounds
+from duckov_game.domain import Enemy, ExtractionZone, LootItem, Player, Projectile, WorldBounds
 
 
 def make_extractable_session() -> GameSession:
@@ -66,3 +66,22 @@ def test_active_run_cannot_be_restarted() -> None:
     assert game.session is active_session
     assert game.stash_item_count == 0
 
+
+def test_new_run_restores_enemy_health_and_clears_projectiles() -> None:
+    def factory() -> GameSession:
+        session = make_extractable_session()
+        session.enemy = Enemy(100, 60)
+        return session
+
+    game = Game(session_factory=factory)
+    old_enemy = game.session.enemy
+    assert old_enemy is not None
+    old_enemy.health.take_damage(100)
+    game.session.projectiles.append(Projectile(5, 15, 1, 0))
+    game.update(0, 0, 0)
+    assert game.start_new_run()
+    assert game.session.enemy is not None
+    assert game.session.enemy is not old_enemy
+    assert game.session.enemy.health.current == 100
+    assert game.session.projectiles == []
+    assert game.stash_item_count == 1

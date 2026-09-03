@@ -5,7 +5,7 @@ from __future__ import annotations
 import pygame
 
 from duckov_game.application import Game, GameSession, RunStatus
-from duckov_game.domain import ExtractionZone, LootItem, Player, WorldBounds
+from duckov_game.domain import Enemy, ExtractionZone, LootItem, Player, WorldBounds
 
 WINDOW_SIZE = (960, 540)
 WINDOW_TITLE = "Duckov Learning Project"
@@ -15,6 +15,7 @@ PLAY_AREA_BORDER_COLOR = (100, 112, 132)
 PLAYER_COLOR = (245, 193, 66)
 AIM_COLOR = (255, 239, 170)
 PROJECTILE_COLOR = (255, 246, 205)
+ENEMY_COLOR = (225, 85, 85)
 LOOT_COLOR = (72, 201, 176)
 EXTRACTION_COLOR = (76, 156, 255)
 SUCCESS_COLOR = (143, 227, 136)
@@ -59,6 +60,7 @@ def _create_session(world_bounds: WorldBounds) -> GameSession:
             width=EXTRACTION_SIZE[0],
             height=EXTRACTION_SIZE[1],
         ),
+        enemy=Enemy(x=world_bounds.width * 0.72, y=world_bounds.height * 0.32),
     )
 
 
@@ -112,6 +114,23 @@ def run(*, max_frames: int | None = None) -> int:
             pygame.draw.rect(
                 screen, PLAY_AREA_BORDER_COLOR, screen.get_rect(), width=4
             )
+            if session.enemy is not None and session.enemy.health.is_alive:
+                enemy = session.enemy
+                enemy_rect = pygame.Rect(
+                    round(enemy.x), round(enemy.y), round(enemy.width), round(enemy.height)
+                )
+                pygame.draw.rect(screen, ENEMY_COLOR, enemy_rect)
+                pygame.draw.rect(
+                    screen, BACKGROUND_COLOR,
+                    pygame.Rect(enemy_rect.x, enemy_rect.y - 10, enemy_rect.width, 6),
+                )
+                pygame.draw.rect(
+                    screen, SUCCESS_COLOR,
+                    pygame.Rect(
+                        enemy_rect.x, enemy_rect.y - 10,
+                        round(enemy_rect.width * enemy.health.current / enemy.health.maximum), 6,
+                    ),
+                )
             pygame.draw.rect(
                 screen,
                 EXTRACTION_COLOR,
@@ -176,6 +195,14 @@ def run(*, max_frames: int | None = None) -> int:
                 f"Stash items: {game.stash_item_count}", True, TEXT_COLOR
             )
             screen.blit(stash_text, (16, 80))
+            if session.enemy is not None:
+                health = session.enemy.health
+                enemy_text = font.render(
+                    f"Enemy HP: {health.current}/{health.maximum}"
+                    if health.is_alive else "Enemy defeated",
+                    True, TEXT_COLOR,
+                )
+                screen.blit(enemy_text, (16, 112))
             if session.status is RunStatus.EXTRACTED:
                 success_text = font.render(
                     "EXTRACTION SUCCESS - press R for a new run",
