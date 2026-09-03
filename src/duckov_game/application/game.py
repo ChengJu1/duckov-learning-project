@@ -53,7 +53,7 @@ class Game:
     def start_new_run(self) -> bool:
         """Replace a completed run with fresh state, preserving the stash."""
 
-        if self.session.status is not RunStatus.EXTRACTED:
+        if self.session.status not in (RunStatus.EXTRACTED, RunStatus.FAILED):
             return False
 
         self.session = self.session_factory()

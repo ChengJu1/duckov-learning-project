@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from math import hypot
 
 from duckov_game.domain.geometry import Rectangle
+from duckov_game.domain.health import Health
 
 
 @dataclass(frozen=True, slots=True)
@@ -31,6 +32,7 @@ class Player:
     speed: float = 240.0
     aim_x: float = 1.0
     aim_y: float = 0.0
+    health: Health = field(default_factory=Health)
 
     def __post_init__(self) -> None:
         if self.width <= 0 or self.height <= 0:

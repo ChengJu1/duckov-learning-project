@@ -16,6 +16,7 @@ PLAYER_COLOR = (245, 193, 66)
 AIM_COLOR = (255, 239, 170)
 PROJECTILE_COLOR = (255, 246, 205)
 ENEMY_COLOR = (225, 85, 85)
+ATTACK_COLOR = (255, 155, 70)
 LOOT_COLOR = (72, 201, 176)
 EXTRACTION_COLOR = (76, 156, 255)
 SUCCESS_COLOR = (143, 227, 136)
@@ -89,6 +90,7 @@ def run(*, max_frames: int | None = None) -> int:
         game = Game(session_factory=lambda: _create_session(world_bounds))
         frame_count = 0
         running = True
+        damage_flash_seconds = 0.0
 
         while running:
             delta_seconds = clock.tick(TARGET_FPS) / 1000.0
@@ -98,13 +100,15 @@ def run(*, max_frames: int | None = None) -> int:
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_r:
-                    game.start_new_run()
+                    if game.start_new_run():
+                        damage_flash_seconds = 0.0
                 elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     fire_requested = True
 
             direction_x, direction_y = _read_movement_direction(
                 pygame.key.get_pressed()
             )
+            previous_health = game.session.player.health.current
             game.update(
                 direction_x,
                 direction_y,
@@ -113,6 +117,9 @@ def run(*, max_frames: int | None = None) -> int:
                 fire_requested=fire_requested,
             )
             session = game.session
+            damage_flash_seconds = max(0.0, damage_flash_seconds - delta_seconds)
+            if session.player.health.current < previous_health:
+                damage_flash_seconds = 0.15
 
             screen.fill(BACKGROUND_COLOR)
             pygame.draw.rect(screen, PLAY_AREA_COLOR, screen.get_rect())
@@ -136,6 +143,13 @@ def run(*, max_frames: int | None = None) -> int:
                         round(enemy_rect.width * enemy.health.current / enemy.health.maximum), 6,
                     ),
                 )
+                pygame.draw.rect(
+                    screen, ATTACK_COLOR,
+                    pygame.Rect(
+                        enemy_rect.x, enemy_rect.y - 16,
+                        round(enemy_rect.width * enemy.attack_progress), 4,
+                    ),
+                )
             pygame.draw.rect(
                 screen,
                 EXTRACTION_COLOR,
@@ -149,7 +163,7 @@ def run(*, max_frames: int | None = None) -> int:
             )
             pygame.draw.rect(
                 screen,
-                PLAYER_COLOR,
+                ENEMY_COLOR if damage_flash_seconds > 0 else PLAYER_COLOR,
                 pygame.Rect(
                     round(session.player.x),
                     round(session.player.y),
@@ -208,10 +222,21 @@ def run(*, max_frames: int | None = None) -> int:
                     True, TEXT_COLOR,
                 )
                 screen.blit(enemy_text, (16, 112))
-                chase_text = font.render(
-                    "Enemy follows you - no attacks yet", True, TEXT_COLOR
-                )
-                screen.blit(chase_text, (16, 144))
+            player_health = session.player.health
+            player_health_text = font.render(
+                f"Player HP: {player_health.current}/{player_health.maximum}",
+                True, TEXT_COLOR,
+            )
+            screen.blit(player_health_text, (16, 144))
+            pygame.draw.rect(screen, BACKGROUND_COLOR, pygame.Rect(16, 172, 160, 8))
+            pygame.draw.rect(
+                screen, SUCCESS_COLOR,
+                pygame.Rect(16, 172, round(160 * player_health.current / player_health.maximum), 8),
+            )
+            attack_hint = font.render(
+                "Keep your distance! Orange bar = enemy attack wind-up", True, TEXT_COLOR
+            )
+            screen.blit(attack_hint, (16, WINDOW_SIZE[1] - 28))
             if session.status is RunStatus.EXTRACTED:
                 success_text = font.render(
                     "EXTRACTION SUCCESS - press R for a new run",
@@ -222,6 +247,15 @@ def run(*, max_frames: int | None = None) -> int:
                     center=(WINDOW_SIZE[0] // 2, WINDOW_SIZE[1] // 2 - 48)
                 )
                 screen.blit(success_text, success_rect)
+            elif session.status is RunStatus.FAILED:
+                failure_text = font.render(
+                    "YOU DIED - carried loot lost - press R for a new run",
+                    True, ENEMY_COLOR,
+                )
+                failure_rect = failure_text.get_rect(
+                    center=(WINDOW_SIZE[0] // 2, WINDOW_SIZE[1] // 2 - 48)
+                )
+                screen.blit(failure_text, failure_rect)
             pygame.display.flip()
 
             frame_count += 1

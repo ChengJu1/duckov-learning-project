@@ -5,7 +5,7 @@ from math import hypot
 
 from duckov_game.domain.geometry import Rectangle
 from duckov_game.domain.health import Health
-from duckov_game.domain.player import WorldBounds
+from duckov_game.domain.player import Player, WorldBounds
 
 
 @dataclass(slots=True)
@@ -17,6 +17,10 @@ class Enemy:
     health: Health = field(default_factory=Health)
     speed: float = 90.0
     stopping_distance: float = 56.0
+    attack_range: float = 64.0
+    attack_damage: int = 20
+    attack_interval: float = 1.0
+    _attack_elapsed: float = field(default=0.0, init=False, repr=False)
 
     def __post_init__(self) -> None:
         if self.width <= 0 or self.height <= 0:
@@ -25,6 +29,12 @@ class Enemy:
             raise ValueError("enemy speed cannot be negative")
         if self.stopping_distance < 0:
             raise ValueError("stopping_distance cannot be negative")
+        if self.attack_range < 0:
+            raise ValueError("attack_range cannot be negative")
+        if self.attack_damage <= 0:
+            raise ValueError("attack_damage must be positive")
+        if self.attack_interval <= 0:
+            raise ValueError("attack_interval must be positive")
 
     @property
     def hitbox(self) -> Rectangle:
@@ -33,6 +43,37 @@ class Enemy:
     @property
     def center(self) -> tuple[float, float]:
         return self.x + self.width / 2, self.y + self.height / 2
+
+    @property
+    def attack_progress(self) -> float:
+        """Fraction of the current wind-up, exposed for rendering only."""
+
+        return min(1.0, self._attack_elapsed / self.attack_interval)
+
+    def attack(self, target: Player, delta_seconds: float) -> None:
+        """Damage a live target after each full interval continuously in range.
+
+        Leaving range cancels wind-up. Large steps count all complete intervals;
+        the tiny tolerance compensates for accumulated floating-point error.
+        """
+
+        if delta_seconds < 0:
+            raise ValueError("delta_seconds cannot be negative")
+        center_x, center_y = self.center
+        target_x, target_y = target.center
+        if (
+            not self.health.is_alive
+            or not target.health.is_alive
+            or hypot(target_x - center_x, target_y - center_y) > self.attack_range
+        ):
+            self._attack_elapsed = 0.0
+            return
+
+        self._attack_elapsed += delta_seconds
+        hits = int(self._attack_elapsed / self.attack_interval + 1e-9)
+        if hits:
+            target.health.take_damage(hits * self.attack_damage)
+            self._attack_elapsed = max(0.0, self._attack_elapsed - hits * self.attack_interval)
 
     def move_toward(
         self,

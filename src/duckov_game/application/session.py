@@ -18,6 +18,7 @@ from duckov_game.domain import (
 class RunStatus(Enum):
     ACTIVE = auto()
     EXTRACTED = auto()
+    FAILED = auto()
 
 
 @dataclass(slots=True)
@@ -45,6 +46,8 @@ class GameSession:
         """Advance movement, combat, pickup, and extraction in a fixed order."""
 
         if self.status is not RunStatus.ACTIVE:
+            return
+        if self._fail_if_player_dead():
             return
 
         self.player.move(direction_x, direction_y, delta_seconds, self.bounds)
@@ -77,6 +80,9 @@ class GameSession:
         self.projectiles = remaining_projectiles
 
         if self.enemy is not None:
+            self.enemy.attack(self.player, delta_seconds)
+            if self._fail_if_player_dead():
+                return
             self.enemy.move_toward(self.player.center, delta_seconds, self.bounds)
 
         if (
@@ -91,3 +97,12 @@ class GameSession:
             and self.player.hitbox.overlaps(self.extraction_zone.hitbox)
         ):
             self.status = RunStatus.EXTRACTED
+
+    def _fail_if_player_dead(self) -> bool:
+        """Death takes priority over pickup and extraction; carried loot is lost."""
+
+        if self.player.health.is_alive:
+            return False
+        self.status = RunStatus.FAILED
+        self.carried_item_count = 0
+        return True

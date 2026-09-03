@@ -51,15 +51,16 @@
 - `src/duckov_game/app.py`：pygame 窗口生命周期和每帧事件循环。
 - `src/duckov_game/__main__.py`：命令行入口；测试可限制运行帧数。
 - `src/duckov_game/application/game.py`：跨局状态所有者；负责一次性结算、stash 和创建新局。
-- `src/duckov_game/application/session.py`：单局状态所有者，固定执行玩家移动、瞄准、发射、弹丸更新、敌人追踪、拾取和撤离判定；撤离后冻结状态。
+- `src/duckov_game/application/session.py`：单局状态所有者；组织战斗、死亡、拾取和撤离，成功或失败后冻结状态。
 - `src/duckov_game/domain/extraction.py`：撤离区域的数据与碰撞范围。
-- `src/duckov_game/domain/enemy.py`：敌人的位置、矩形命中范围、独立生命值和受边界约束的定速追踪。
-- `src/duckov_game/domain/health.py`：初始满血、非负伤害、扣血下限和存活状态；暂由敌人使用。
+- `src/duckov_game/domain/enemy.py`：敌人位置、命中范围、生命值、定速追踪和近距离攻击计时。
+- `src/duckov_game/domain/health.py`：初始满血、非负伤害、扣血下限和存活状态；玩家与敌人分别持有独立实例。
 - `src/duckov_game/domain/geometry.py`：不依赖 pygame 的矩形碰撞规则。
 - `src/duckov_game/domain/item.py`：单个局内物品的位置和收集状态。
-- `src/duckov_game/domain/player.py`：玩家位置、移动与瞄准方向归一化、边界规则，不依赖 pygame。
+- `src/duckov_game/domain/player.py`：玩家位置、生命值、移动与瞄准方向归一化、边界规则，不依赖 pygame。
 - `src/duckov_game/domain/projectile.py`：弹丸方向归一化、移动和地图边界相交规则。
 - `tests/test_app.py`：无显示设备的窗口冒烟测试和参数校验。
+- `tests/test_combat.py`：攻击范围与计时、取消准备、死亡优先级、双方结算路径和重开恢复。
 - `tests/test_enemy.py`：生命值、状态隔离、追踪速度、停止距离、不同时间步长、边界和死亡停止。
 - `tests/test_game.py`：撤离结算去重、新局重建和 stash 保留测试。
 - `tests/test_player.py`：移动速度、对角移动、瞄准方向、地图边界和非法时间参数测试。
@@ -74,10 +75,18 @@ pygame 层只读取鼠标坐标与左键事件，并绘制瞄准线和弹丸；�
 
 `GameSession.enemy` 可为空，保留无敌人场景的测试与用法；窗口工厂为每局创建一个独立敌人。`Enemy.health` 保存 `maximum/current`，`Projectile.damage` 默认 25。显示层只读取生命值绘制血条与文本，不执行扣血。
 
-弹丸更新顺序：记住起点 → 移动 → 检查到终点的整段轨迹是否命中存活敌人 → 扣血并消耗命中弹丸 → 清理地图外弹丸。命中先于越界清理，因此单帧跨过目标并飞出地图仍能正确扣血。之后让仍存活的敌人追踪玩家，再处理拾取和撤离；撤离完成后的更新完全冻结。新局整体替换会重置敌人的位置、生命值和弹丸，不影响局外 stash。
+弹丸更新顺序：记住起点 → 移动 → 检查到终点的整段轨迹是否命中存活敌人 → 扣血并消耗命中弹丸 → 清理地图外弹丸。命中先于越界清理，因此单帧跨过目标并飞出地图仍能正确扣血。之后处理存活敌人的攻击，若玩家死亡则立即失败返回；否则执行追踪、拾取和撤离。新局整体替换会重置双方位置、生命值、攻击计时和弹丸，不影响局外 stash。
 
 当前碰撞模型：敌人是轴对齐矩形；弹丸显示为圆形，但命中范围简化为边长 `2 * radius` 的正方形。通过扩大目标矩形并检测中心轨迹与矩形是否相交，避免高速弹丸跨过敌人而漏判；接触边界算命中。圆形的四角外接区域会有少量判定容差，这是当前明确采用的简化。命中判定使用本帧敌人移动前的位置，随后才移动存活敌人；这是顺序更新，不是双方同时运动的连续物理模拟。只有一个敌人，尚未实现多个敌人的最近命中排序、障碍物或玩家碰撞。
 
 ### 简单追踪规则
 
 `Enemy.move_toward(target, delta_seconds, bounds)` 接收目标中心坐标、帧耗时和地图边界，不读取键盘或依赖 pygame。方向归一化后按 `speed * delta_seconds` 计算距离，再限制为不超过到停止范围的剩余距离，避免斜向更快和大帧越过目标。默认 `speed=90`、`stopping_distance=56`，速度为 0 时仍可构建静态测试目标。距离小于停止范围时不主动退让；玩家仍可穿过敌人。击败当帧在追踪前完成扣血，因此不会多走一步。
+
+### 攻击与终局规则
+
+`Enemy.attack(player, delta_seconds)` 使用中心距离判断范围，累计 `_attack_elapsed`；每满 `attack_interval=1` 秒造成 `attack_damage=20` 伤害，`attack_range=64`。离开范围、攻击者死亡或目标死亡会清除计时。`attack_progress` 只供绘制橙色准备条。大步长会累计完整攻击次数并保留不足一秒的余量；边界使用极小浮点容差，避免按帧累加时漏掉整秒攻击。
+
+范围采样发生在玩家移动之后、敌人追踪之前；追踪进入范围后从下一帧计时，不把远处追赶所耗整帧时间算作近身攻击准备。仍采用顺序更新，未实现双方连续运动的精确进入范围时刻。完整顺序、取舍与测试依据见 [决策 0003](decisions/0003-combat-timing-and-settlement.md)。
+
+`RunStatus` 有 `ACTIVE`、`EXTRACTED`、`FAILED`。`GameSession` 在帧开始和敌人攻击后检查死亡，失败时清空携带物，并阻止后续拾取和撤离。`Game` 仍只在 `ACTIVE → EXTRACTED` 时增加 stash；失败不会增减历史库存。只有终局状态可以按 `R` 重建整局。界面血条和受伤闪红读取领域状态，不自行扣血。
