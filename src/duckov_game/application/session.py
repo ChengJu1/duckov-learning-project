@@ -76,6 +76,9 @@ class GameSession:
                 remaining_projectiles.append(projectile)
         self.projectiles = remaining_projectiles
 
+        if self.enemy is not None:
+            self.enemy.move_toward(self.player.center, delta_seconds, self.bounds)
+
         if (
             not self.loot_item.is_collected
             and self.player.hitbox.overlaps(self.loot_item.hitbox)

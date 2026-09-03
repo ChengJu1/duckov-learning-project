@@ -136,7 +136,7 @@ def test_extracted_run_cannot_fire_projectiles() -> None:
 
 def test_hit_consumes_projectile_and_deals_damage_only_once() -> None:
     session = make_session()
-    session.enemy = Enemy(100, 10, width=10, height=10)
+    session.enemy = Enemy(100, 10, width=10, height=10, speed=0)
     session.update(0, 0, 0.2, aim_target=(105, 15), fire_requested=True)
     assert session.enemy.health.current == 75
     assert session.projectiles == []
@@ -146,7 +146,7 @@ def test_hit_consumes_projectile_and_deals_damage_only_once() -> None:
 
 def test_projectile_hits_before_out_of_bounds_cleanup_even_during_long_frame() -> None:
     session = make_session()
-    session.enemy = Enemy(100, 10)
+    session.enemy = Enemy(100, 10, speed=0)
     session.update(0, 0, 1, fire_requested=True)
     assert session.enemy.health.current == 75
     assert session.projectiles == []
@@ -154,7 +154,7 @@ def test_projectile_hits_before_out_of_bounds_cleanup_even_during_long_frame() -
 
 def test_miss_does_not_damage_enemy() -> None:
     session = make_session()
-    session.enemy = Enemy(100, 50)
+    session.enemy = Enemy(100, 50, speed=0)
     session.update(0, 0, 0.2, fire_requested=True)
     assert session.enemy.health.current == 100
     assert len(session.projectiles) == 1
@@ -162,7 +162,7 @@ def test_miss_does_not_damage_enemy() -> None:
 
 def test_four_hits_defeat_enemy_and_dead_enemy_does_not_absorb_shots() -> None:
     session = make_session()
-    session.enemy = Enemy(100, 10)
+    session.enemy = Enemy(100, 10, speed=0)
     for expected_hp in (75, 50, 25, 0):
         session.update(0, 0, 0.2, fire_requested=True)
         assert session.enemy.health.current == expected_hp
@@ -174,7 +174,7 @@ def test_four_hits_defeat_enemy_and_dead_enemy_does_not_absorb_shots() -> None:
 
 def test_same_frame_hits_stop_at_death() -> None:
     session = make_session()
-    session.enemy = Enemy(100, 10)
+    session.enemy = Enemy(100, 10, speed=0)
     session.enemy.health.take_damage(75)
     session.projectiles = [Projectile(5, 15, 1, 0), Projectile(5, 15, 1, 0)]
     session.update(0, 0, 0.2)
@@ -192,3 +192,34 @@ def test_live_enemy_does_not_block_extraction_and_combat_freezes_afterward() -> 
     assert session.enemy.health.current == 100
     assert len(session.projectiles) == 1
     assert session.projectiles[0].x == 5
+    assert (session.enemy.x, session.enemy.y) == (100, 10)
+
+
+def test_enemy_pursues_player_after_player_moves() -> None:
+    session = make_session()
+    session.enemy = Enemy(150, 10, width=10, height=10, speed=40, stopping_distance=10)
+    session.update(1, 0, 0.5)
+    assert session.player.x == 50
+    assert session.enemy.x == pytest.approx(130)
+    assert session.enemy.y == pytest.approx(10)
+
+
+def test_enemy_killed_this_frame_does_not_take_a_final_step() -> None:
+    session = make_session()
+    session.enemy = Enemy(100, 10, width=10, height=10)
+    session.enemy.health.take_damage(75)
+    session.update(0, 0, 0.2, fire_requested=True)
+    assert not session.enemy.health.is_alive
+    assert (session.enemy.x, session.enemy.y) == (100, 10)
+    session.update(1, 0, 0.1)
+    assert (session.enemy.x, session.enemy.y) == (100, 10)
+
+
+def test_moving_enemy_can_still_be_hit_four_times() -> None:
+    session = make_session()
+    session.enemy = Enemy(100, 10, width=10, height=10)
+    for expected in (75, 50, 25, 0):
+        target = session.enemy.center
+        session.update(0, 0, 0.2, aim_target=target, fire_requested=True)
+        assert session.enemy.health.current == expected
+        assert session.projectiles == []

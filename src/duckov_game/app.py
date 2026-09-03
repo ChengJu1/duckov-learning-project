@@ -23,6 +23,7 @@ TEXT_COLOR = (225, 230, 238)
 TARGET_FPS = 60
 PLAYER_SIZE = 32.0
 PLAYER_SPEED = 240.0
+ENEMY_SPEED = 90.0
 LOOT_SIZE = 24.0
 EXTRACTION_SIZE = (64.0, 112.0)
 AIM_LINE_LENGTH = 48.0
@@ -60,7 +61,11 @@ def _create_session(world_bounds: WorldBounds) -> GameSession:
             width=EXTRACTION_SIZE[0],
             height=EXTRACTION_SIZE[1],
         ),
-        enemy=Enemy(x=world_bounds.width * 0.72, y=world_bounds.height * 0.32),
+        enemy=Enemy(
+            x=world_bounds.width * 0.72,
+            y=world_bounds.height * 0.32,
+            speed=ENEMY_SPEED,
+        ),
     )
 
 
@@ -203,6 +208,10 @@ def run(*, max_frames: int | None = None) -> int:
                     True, TEXT_COLOR,
                 )
                 screen.blit(enemy_text, (16, 112))
+                chase_text = font.render(
+                    "Enemy follows you - no attacks yet", True, TEXT_COLOR
+                )
+                screen.blit(chase_text, (16, 144))
             if session.status is RunStatus.EXTRACTED:
                 success_text = font.render(
                     "EXTRACTION SUCCESS - press R for a new run",

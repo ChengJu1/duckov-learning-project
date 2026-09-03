@@ -76,6 +76,8 @@ def test_new_run_restores_enemy_health_and_clears_projectiles() -> None:
     game = Game(session_factory=factory)
     old_enemy = game.session.enemy
     assert old_enemy is not None
+    old_enemy.move_toward((18, 18), 0.5, game.session.bounds)
+    assert (old_enemy.x, old_enemy.y) != (100, 60)
     old_enemy.health.take_damage(100)
     game.session.projectiles.append(Projectile(5, 15, 1, 0))
     game.update(0, 0, 0)
@@ -83,5 +85,6 @@ def test_new_run_restores_enemy_health_and_clears_projectiles() -> None:
     assert game.session.enemy is not None
     assert game.session.enemy is not old_enemy
     assert game.session.enemy.health.current == 100
+    assert (game.session.enemy.x, game.session.enemy.y) == (100, 60)
     assert game.session.projectiles == []
     assert game.stash_item_count == 1
