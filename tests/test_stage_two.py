@@ -7,7 +7,7 @@ import pytest
 
 from duckov_game.app import WINDOW_SIZE, _create_session
 from duckov_game.application import Game, RunStatus
-from duckov_game.domain import Rectangle, WorldBounds
+from duckov_game.domain import ItemStack, Rectangle, WorldBounds
 
 
 def walk_to(game: Game, destination: Rectangle, delta: float) -> None:
@@ -39,16 +39,17 @@ def win_run(game: Game, delta: float) -> None:
     assert game.session.status is RunStatus.ACTIVE
     walk_to(game, game.session.loot_item.hitbox, delta)
     assert game.session.carried_item_count == 1
+    assert game.session.backpack.entries == (ItemStack("scrap", 1),)
     walk_to(game, game.session.extraction_zone.hitbox, delta)
     assert game.session.status is RunStatus.EXTRACTED
     assert game.session.carried_item_count == 0
 
 
 def assert_finished_run_is_frozen(game: Game) -> None:
-    snapshot, stash = asdict(game.session), game.stash_item_count
+    snapshot, stash = asdict(game.session), game.stash.entries
     game.update(1, 1, 10, aim_target=(0, 0), fire_requested=True)
     assert asdict(game.session) == snapshot
-    assert game.stash_item_count == stash
+    assert game.stash.entries == stash
 
 
 @pytest.mark.parametrize("fps", [30, 60, 120])
@@ -61,6 +62,7 @@ def test_default_game_win_loss_win_cycle(fps: int) -> None:
 
     win_run(game, delta)
     assert game.stash_item_count == 1
+    assert game.stash.entries == (ItemStack("scrap", 1),)
     assert_finished_run_is_frozen(game)
 
     assert game.start_new_run()
@@ -82,4 +84,5 @@ def test_default_game_win_loss_win_cycle(fps: int) -> None:
     assert game.stash_item_count == 1
     win_run(game, delta)
     assert game.stash_item_count == 2
+    assert game.stash.entries == (ItemStack("scrap", 2),)
     assert_finished_run_is_frozen(game)

@@ -6,6 +6,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from duckov_game.application.session import GameSession, RunStatus
+from duckov_game.domain import Inventory
 
 SessionFactory = Callable[[], GameSession]
 
@@ -15,13 +16,15 @@ class Game:
     """Own persistent progression and the current run."""
 
     session_factory: SessionFactory
-    stash_item_count: int = 0
+    stash: Inventory = field(default_factory=Inventory)
     session: GameSession = field(init=False)
 
     def __post_init__(self) -> None:
-        if self.stash_item_count < 0:
-            raise ValueError("stash_item_count cannot be negative")
         self.session = self.session_factory()
+
+    @property
+    def stash_item_count(self) -> int:
+        return self.stash.total_count
 
     def update(
         self,
@@ -47,8 +50,7 @@ class Game:
             previous_status is RunStatus.ACTIVE
             and self.session.status is RunStatus.EXTRACTED
         ):
-            self.stash_item_count += self.session.carried_item_count
-            self.session.carried_item_count = 0
+            self.session.backpack.transfer_all_to(self.stash)
 
     def start_new_run(self) -> bool:
         """Replace a completed run with fresh state, preserving the stash."""

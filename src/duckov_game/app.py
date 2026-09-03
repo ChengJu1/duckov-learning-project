@@ -5,7 +5,7 @@ from __future__ import annotations
 import pygame
 
 from duckov_game.application import Game, GameSession, RunStatus
-from duckov_game.domain import Enemy, ExtractionZone, LootItem, Player, WorldBounds
+from duckov_game.domain import Enemy, ExtractionZone, Inventory, LootItem, Player, WorldBounds
 
 WINDOW_SIZE = (960, 540)
 WINDOW_TITLE = "Duckov Learning Project"
@@ -28,6 +28,10 @@ ENEMY_SPEED = 90.0
 LOOT_SIZE = 24.0
 EXTRACTION_SIZE = (64.0, 112.0)
 AIM_LINE_LENGTH = 48.0
+
+
+def _inventory_summary(inventory: Inventory) -> str:
+    return ", ".join(f"{entry.item_id} x{entry.quantity}" for entry in inventory.entries) or "empty"
 
 
 def _read_movement_direction(keys: pygame.key.ScancodeWrapper) -> tuple[int, int]:
@@ -55,6 +59,8 @@ def _create_session(world_bounds: WorldBounds) -> GameSession:
             y=(world_bounds.height - LOOT_SIZE) / 2,
             width=LOOT_SIZE,
             height=LOOT_SIZE,
+            item_id="scrap",
+            quantity=1,
         ),
         extraction_zone=ExtractionZone(
             x=40,
@@ -207,11 +213,13 @@ def run(*, max_frames: int | None = None) -> int:
             )
             screen.blit(instructions, (16, 16))
             carried_text = font.render(
-                f"Carried items: {session.carried_item_count}", True, TEXT_COLOR
+                f"Carried items: {session.carried_item_count} ({_inventory_summary(session.backpack)})",
+                True, TEXT_COLOR,
             )
             screen.blit(carried_text, (16, 48))
             stash_text = font.render(
-                f"Stash items: {game.stash_item_count}", True, TEXT_COLOR
+                f"Stash items: {game.stash_item_count} ({_inventory_summary(game.stash)})",
+                True, TEXT_COLOR,
             )
             screen.blit(stash_text, (16, 80))
             if session.enemy is not None:

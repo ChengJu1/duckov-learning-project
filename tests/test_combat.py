@@ -124,7 +124,7 @@ def test_dead_target_does_not_receive_attacks() -> None:
 
 def test_death_discards_carried_loot_and_freezes_all_session_state() -> None:
     session = make_combat_session()
-    session.carried_item_count = 1
+    session.backpack.add("scrap", 1)
     session.loot_item.is_collected = True
     session.projectiles.append(Projectile(20, 140, 1, 0, speed=0))
     session.update(0, 0, 5)
@@ -156,8 +156,9 @@ def test_lethal_attack_prevents_pickup_on_same_frame() -> None:
 
 
 def test_death_at_extraction_never_adds_to_or_reduces_stash() -> None:
-    game = Game(session_factory=make_combat_session, stash_item_count=7)
-    game.session.carried_item_count = 1
+    game = Game(session_factory=make_combat_session)
+    game.stash.add("scrap", 7)
+    game.session.backpack.add("scrap", 1)
     game.session.extraction_zone = ExtractionZone(20, 60, 20, 20)
     game.session.player.health.take_damage(80)
     game.update(0, 0, 1)
@@ -169,8 +170,9 @@ def test_death_at_extraction_never_adds_to_or_reduces_stash() -> None:
 
 
 def test_surviving_attack_can_extract_and_then_freezes_health_and_stash() -> None:
-    game = Game(session_factory=make_combat_session, stash_item_count=7)
-    game.session.carried_item_count = 1
+    game = Game(session_factory=make_combat_session)
+    game.stash.add("scrap", 7)
+    game.session.backpack.add("scrap", 1)
     game.session.extraction_zone = ExtractionZone(20, 60, 20, 20)
     game.update(0, 0, 1)
     assert game.session.player.health.current == 80
@@ -186,9 +188,10 @@ def test_surviving_attack_can_extract_and_then_freezes_health_and_stash() -> Non
 
 
 def test_failed_run_restart_restores_health_position_loot_and_attack_timer() -> None:
-    game = Game(session_factory=make_combat_session, stash_item_count=7)
+    game = Game(session_factory=make_combat_session)
+    game.stash.add("scrap", 7)
     old_session = game.session
-    old_session.carried_item_count = 1
+    old_session.backpack.add("scrap", 1)
     old_session.loot_item.is_collected = True
     old_session.player.x = 30
     assert old_session.enemy is not None

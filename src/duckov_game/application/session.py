@@ -8,6 +8,7 @@ from enum import Enum, auto
 from duckov_game.domain import (
     Enemy,
     ExtractionZone,
+    Inventory,
     LootItem,
     Player,
     Projectile,
@@ -30,9 +31,13 @@ class GameSession:
     loot_item: LootItem
     extraction_zone: ExtractionZone
     projectiles: list[Projectile] = field(default_factory=list)
-    carried_item_count: int = 0
+    backpack: Inventory = field(default_factory=Inventory)
     status: RunStatus = RunStatus.ACTIVE
     enemy: Enemy | None = None
+
+    @property
+    def carried_item_count(self) -> int:
+        return self.backpack.total_count
 
     def update(
         self,
@@ -89,8 +94,8 @@ class GameSession:
             not self.loot_item.is_collected
             and self.player.hitbox.overlaps(self.loot_item.hitbox)
         ):
+            self.backpack.add(self.loot_item.item_id, self.loot_item.quantity)
             self.loot_item.is_collected = True
-            self.carried_item_count += 1
 
         if (
             self.carried_item_count > 0
@@ -104,5 +109,5 @@ class GameSession:
         if self.player.health.is_alive:
             return False
         self.status = RunStatus.FAILED
-        self.carried_item_count = 0
+        self.backpack.clear()
         return True

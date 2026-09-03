@@ -5,13 +5,21 @@ import pytest
 from duckov_game.app import run
 from duckov_game import app
 from duckov_game.application import RunStatus
-from duckov_game.domain import WorldBounds
+from duckov_game.domain import Inventory, WorldBounds
 
 
 def test_window_runs_for_two_frames(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
 
     assert run(max_frames=2) == 0
+
+
+def test_inventory_summary_shows_sorted_item_ids_and_quantities() -> None:
+    inventory = Inventory()
+    assert app._inventory_summary(inventory) == "empty"
+    inventory.add("wire", 2)
+    inventory.add("scrap", 3)
+    assert app._inventory_summary(inventory) == "scrap x3, wire x2"
 
 
 def test_max_frames_must_be_positive() -> None:

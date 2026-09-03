@@ -56,10 +56,13 @@
 - `src/duckov_game/domain/enemy.py`：敌人位置、命中范围、生命值、定速追踪和近距离攻击计时。
 - `src/duckov_game/domain/health.py`：初始满血、非负伤害、扣血下限和存活状态；玩家与敌人分别持有独立实例。
 - `src/duckov_game/domain/geometry.py`：不依赖 pygame 的矩形碰撞规则。
-- `src/duckov_game/domain/item.py`：单个局内物品的位置和收集状态。
+- `src/duckov_game/domain/item.py`：不可变 `ItemStack`（标识与数量），以及地图拾取物的位置、内容和收集状态。
+- `src/duckov_game/domain/inventory.py`：按物品标识累计数量，提供增减、只读快照、清空与整体转移。
 - `src/duckov_game/domain/player.py`：玩家位置、生命值、移动与瞄准方向归一化、边界规则，不依赖 pygame。
 - `src/duckov_game/domain/projectile.py`：弹丸方向归一化、移动和地图边界相交规则。
 - `tests/test_app.py`：无显示设备的窗口冒烟测试和参数校验。
+- `tests/test_inventory.py`：库存增减、参数校验、快照与转移隔离。
+- `tests/test_inventory_flow.py`：多类别拾取、跨局合并、失败清空与 stash 保留。
 - `tests/test_combat.py`：攻击范围与计时、取消准备、死亡优先级、双方结算路径和重开恢复。
 - `tests/test_stage_two.py`：使用游戏实际工厂，通过输入推进成功/失败/成功三局；验证库存结算与整局恢复，覆盖三种模拟帧率。
 - `tests/test_enemy.py`：生命值、状态隔离、追踪速度、停止距离、不同时间步长、边界和死亡停止。
@@ -70,7 +73,7 @@
 
 `Game` 的生命周期跨越多局，`GameSession` 每次按 `R` 后整体替换。这样局外库存被保留，而玩家、物品、携带数和撤离状态天然恢复初始值。
 
-这里的跨局保留仅指同一进程内的内存状态，尚未实现关闭程序后的持久化。阶段 2 复盘和下一阶段数据结构演进范围见 [阶段复盘](stage-two-review.md)。
+这里的跨局保留仅指同一进程内的内存状态，尚未实现关闭程序后的持久化。[阶段 2 复盘](stage-two-review.md)保留当时快照；当前库存结构见下文。
 
 pygame 层只读取鼠标坐标与左键事件，并绘制瞄准线和弹丸；玩家中心到目标点的单位方向、弹丸生成、定速移动与地图外清理由领域层和应用层处理。目标恰好位于玩家中心时保留上一次方向，避免产生无效的零向量。
 
@@ -93,3 +96,13 @@ pygame 层只读取鼠标坐标与左键事件，并绘制瞄准线和弹丸；�
 范围采样发生在玩家移动之后、敌人追踪之前；追踪进入范围后从下一帧计时，不把远处追赶所耗整帧时间算作近身攻击准备。仍采用顺序更新，未实现双方连续运动的精确进入范围时刻。完整顺序、取舍与测试依据见 [决策 0003](decisions/0003-combat-timing-and-settlement.md)。
 
 `RunStatus` 有 `ACTIVE`、`EXTRACTED`、`FAILED`。`GameSession` 在帧开始和敌人攻击后检查死亡，失败时清空携带物，并阻止后续拾取和撤离。`Game` 仍只在 `ACTIVE → EXTRACTED` 时增加 stash；失败不会增减历史库存。只有终局状态可以按 `R` 重建整局。界面血条和受伤闪红读取领域状态，不自行扣血。
+
+### 按种类记录库存
+
+- `LootItem.item_id/quantity` 指定拾取内容，默认 `scrap/1`。标识为非空、无首尾空白的字符串，区分大小写；暂不提供物品目录、翻译名或未知类型校验。
+- `GameSession.backpack` 与 `Game.stash` 分别持有 `Inventory`。内部字典是唯一数量来源；`entries` 返回按标识排序的不可变 `ItemStack` 快照，不暴露内部字典。
+- `carried_item_count`、`stash_item_count` 保留为只读计算属性，不再是构造参数或可赋值字段。测试初始化改用 `backpack.add(...)` / `stash.add(...)`，不再维护两份数量。
+- 成功时 `backpack.transfer_all_to(stash)` 合并各类数量，然后清空来源。目标使用合并后的新字典，不与来源共享；重复转移空背包不会增加库存。自身转移被拒绝。
+- 失败仅调用 `backpack.clear()`。新局重建背包但沿用 stash；空手撤离仍通过总数判断。
+
+当前界面保留总数并附短明细，地图只有一种物品，尚未做很多种类/长名称的分页或滚动展示。模型取舍与接口迁移见 [决策 0004](decisions/0004-typed-inventory.md)。
