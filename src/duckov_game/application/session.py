@@ -34,6 +34,7 @@ class GameSession:
     backpack: Inventory = field(default_factory=Inventory)
     status: RunStatus = RunStatus.ACTIVE
     enemy: Enemy | None = None
+    pickup_blocked: bool = field(default=False, init=False)
 
     @property
     def carried_item_count(self) -> int:
@@ -90,8 +91,12 @@ class GameSession:
                 return
             self.enemy.move_toward(self.player.center, delta_seconds, self.bounds)
 
+        self.pickup_blocked = False
         for loot in self.loot_items:
             if not loot.is_collected and self.player.hitbox.overlaps(loot.hitbox):
+                if not self.backpack.can_add(loot.item_id, loot.quantity):
+                    self.pickup_blocked = True
+                    continue
                 self.backpack.add(loot.item_id, loot.quantity)
                 loot.is_collected = True
 

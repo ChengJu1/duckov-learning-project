@@ -94,7 +94,7 @@ def test_empty_map_cannot_extract() -> None:
 
 
 @pytest.mark.parametrize("fps", [30, 60, 120])
-def test_real_map_all_pickups_then_extraction(fps: int) -> None:
+def test_real_map_capacity_blocks_bundle_then_extracts(fps: int) -> None:
     game = Game(lambda: _create_session(WorldBounds(*WINDOW_SIZE)))
     # Reuse the existing movement harness, which only submits application inputs.
     from test_stage_two import walk_to
@@ -108,8 +108,9 @@ def test_real_map_all_pickups_then_extraction(fps: int) -> None:
     assert not enemy.health.is_alive
     for loot in game.session.loot_items:
         walk_to(game, loot.hitbox, 1 / fps)
-    assert all(loot.is_collected for loot in game.session.loot_items)
-    assert game.session.backpack.entries == (ItemStack("scrap", 2), ItemStack("wire", 2))
+    assert [loot.is_collected for loot in game.session.loot_items] == [True, True, False]
+    assert game.session.pickup_blocked
+    assert game.session.backpack.entries == (ItemStack("scrap", 2),)
     walk_to(game, game.session.extraction_zone.hitbox, 1 / fps)
     assert game.session.status is RunStatus.EXTRACTED
-    assert game.stash.entries == (ItemStack("scrap", 2), ItemStack("wire", 2))
+    assert game.stash.entries == (ItemStack("scrap", 2),)

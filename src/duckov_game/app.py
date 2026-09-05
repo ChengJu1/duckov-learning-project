@@ -47,6 +47,7 @@ def _read_movement_direction(keys: pygame.key.ScancodeWrapper) -> tuple[int, int
 
 def _create_session(world_bounds: WorldBounds) -> GameSession:
     return GameSession(
+        backpack=Inventory(capacity=3),
         bounds=world_bounds,
         player=Player(
             x=(world_bounds.width - PLAYER_SIZE) / 2,
@@ -224,7 +225,7 @@ def run(*, max_frames: int | None = None) -> int:
             )
             screen.blit(instructions, (16, 16))
             carried_text = font.render(
-                f"Carried items: {session.carried_item_count} ({_inventory_summary(session.backpack)})",
+                f"Carried items: {session.carried_item_count}/{session.backpack.capacity} ({_inventory_summary(session.backpack)})",
                 True, TEXT_COLOR,
             )
             screen.blit(carried_text, (16, 48))
@@ -256,6 +257,12 @@ def run(*, max_frames: int | None = None) -> int:
                 "Keep your distance! Orange bar = enemy attack wind-up", True, TEXT_COLOR
             )
             screen.blit(attack_hint, (16, WINDOW_SIZE[1] - 28))
+            if session.pickup_blocked and session.status is RunStatus.ACTIVE:
+                full_text = font.render(
+                    "Not enough backpack space - pickup stays on the ground",
+                    True, ATTACK_COLOR,
+                )
+                screen.blit(full_text, (16, WINDOW_SIZE[1] - 56))
             if session.status is RunStatus.EXTRACTED:
                 success_text = font.render(
                     "EXTRACTION SUCCESS - press R for a new run",

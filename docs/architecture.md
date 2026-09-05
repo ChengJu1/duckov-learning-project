@@ -58,6 +58,7 @@
 - `src/duckov_game/domain/geometry.py`：不依赖 pygame 的矩形碰撞规则。
 - `src/duckov_game/domain/item.py`：不可变 `ItemStack`（标识与数量），以及地图拾取物的位置、内容和收集状态。
 - `src/duckov_game/domain/inventory.py`：按物品标识累计数量，提供增减、只读快照、清空与整体转移。
+- `tests/test_capacity.py`：容量边界、拒绝拾取、提示恢复、转移失败不丢失、满载结算和重开。
 - `src/duckov_game/domain/player.py`：玩家位置、生命值、移动与瞄准方向归一化、边界规则，不依赖 pygame。
 - `src/duckov_game/domain/projectile.py`：弹丸方向归一化、移动和地图边界相交规则。
 - `tests/test_app.py`：无显示设备的窗口冒烟测试和参数校验。
@@ -106,6 +107,12 @@ pygame 层只读取鼠标坐标与左键事件，并绘制瞄准线和弹丸；�
 - 失败仅调用 `backpack.clear()`。新局重建背包但沿用 stash；空手撤离仍通过总数判断。
 
 当前界面保留总数并附短明细，支持地图上的废料和电线，尚未做很多种类/长名称的分页或滚动展示。模型取舍与接口迁移见 [决策 0004](decisions/0004-typed-inventory.md)。
+
+### 可选容量
+
+`Inventory.capacity` 为非负整数或 `None`（不限）；按总数量而非物品种类计算。模型与普通测试默认不限容量，窗口工厂显式创建 `Inventory(capacity=3)` 背包，stash 保持不限。`can_add` 检查整捆能否装下；`add` 超限抛错且不改变内容。整体转移先检查目标能否容纳全部来源，失败保留双方原内容；当前正常撤离的目标 stash 不限容量。
+
+单局拾取前检查容量，失败置 `pickup_blocked=True` 并保留地面物品。每个活动帧重新计算该提示，离开后清除；终局隐藏提示。同帧重叠拾取按列表顺序处理，先能装下的先入包，后续空间不足的留在原地。清空库存不会改变容量，新局工厂重新建立相同容量。现有 `remove` 接口可释放空间，但尚无游戏内丢弃按钮。
 
 ### 多拾取点
 

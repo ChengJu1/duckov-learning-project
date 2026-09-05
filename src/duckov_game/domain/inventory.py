@@ -1,4 +1,4 @@
-"""In-memory quantities keyed by item identifier; no capacity or equipment rules."""
+"""In-memory quantities with an optional total-item capacity."""
 
 from __future__ import annotations
 
@@ -9,7 +9,16 @@ from duckov_game.domain.item import ItemStack
 
 @dataclass(slots=True)
 class Inventory:
+    capacity: int | None = None
     _quantities: dict[str, int] = field(default_factory=dict, init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        if self.capacity is not None and (type(self.capacity) is not int or self.capacity < 0):
+            raise ValueError("capacity must be a nonnegative integer or None")
+
+    def can_add(self, item_id: str, quantity: int = 1) -> bool:
+        ItemStack(item_id, quantity)
+        return self.capacity is None or self.total_count + quantity <= self.capacity
 
     @property
     def total_count(self) -> int:
@@ -27,6 +36,8 @@ class Inventory:
 
     def add(self, item_id: str, quantity: int = 1) -> None:
         stack = ItemStack(item_id, quantity)
+        if not self.can_add(item_id, quantity):
+            raise ValueError("inventory capacity exceeded")
         self._quantities[stack.item_id] = self._quantities.get(stack.item_id, 0) + stack.quantity
 
     def remove(self, item_id: str, quantity: int = 1) -> None:
@@ -48,6 +59,8 @@ class Inventory:
 
         if target is self:
             raise ValueError("cannot transfer inventory to itself")
+        if target.capacity is not None and target.total_count + self.total_count > target.capacity:
+            raise ValueError("inventory capacity exceeded")
         merged = target._quantities.copy()
         for item_id, quantity in self._quantities.items():
             merged[item_id] = merged.get(item_id, 0) + quantity
