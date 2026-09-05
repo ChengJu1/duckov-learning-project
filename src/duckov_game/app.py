@@ -18,6 +18,7 @@ PROJECTILE_COLOR = (255, 246, 205)
 ENEMY_COLOR = (225, 85, 85)
 ATTACK_COLOR = (255, 155, 70)
 LOOT_COLOR = (72, 201, 176)
+WIRE_COLOR = (190, 150, 245)
 EXTRACTION_COLOR = (76, 156, 255)
 SUCCESS_COLOR = (143, 227, 136)
 TEXT_COLOR = (225, 230, 238)
@@ -54,14 +55,22 @@ def _create_session(world_bounds: WorldBounds) -> GameSession:
             height=PLAYER_SIZE,
             speed=PLAYER_SPEED,
         ),
-        loot_item=LootItem(
+        loot_items=[LootItem(
             x=world_bounds.width * 0.75,
             y=(world_bounds.height - LOOT_SIZE) / 2,
             width=LOOT_SIZE,
             height=LOOT_SIZE,
             item_id="scrap",
             quantity=1,
-        ),
+        ), LootItem(
+            x=world_bounds.width * 0.55,
+            y=world_bounds.height * 0.72,
+            item_id="scrap", quantity=1,
+        ), LootItem(
+            x=world_bounds.width * 0.82,
+            y=world_bounds.height * 0.72,
+            item_id="wire", quantity=2,
+        )],
         extraction_zone=ExtractionZone(
             x=40,
             y=(world_bounds.height - EXTRACTION_SIZE[1]) / 2,
@@ -195,17 +204,19 @@ def run(*, max_frames: int | None = None) -> int:
                     (round(projectile.x), round(projectile.y)),
                     round(projectile.radius),
                 )
-            if not session.loot_item.is_collected:
+            for loot in session.loot_items:
+                if loot.is_collected:
+                    continue
                 pygame.draw.rect(
                     screen,
-                    LOOT_COLOR,
+                    WIRE_COLOR if loot.item_id == "wire" else LOOT_COLOR,
                     pygame.Rect(
-                        round(session.loot_item.x),
-                        round(session.loot_item.y),
-                        round(session.loot_item.width),
-                        round(session.loot_item.height),
+                        round(loot.x), round(loot.y),
+                        round(loot.width), round(loot.height),
                     ),
                 )
+                label = font.render(f"{loot.item_id} x{loot.quantity}", True, TEXT_COLOR)
+                screen.blit(label, (round(loot.x), round(loot.y + loot.height + 4)))
             instructions = font.render(
                 "WASD move | Mouse aim | Left click fire | Collect then extract",
                 True,

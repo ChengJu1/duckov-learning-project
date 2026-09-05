@@ -28,7 +28,7 @@ class GameSession:
 
     bounds: WorldBounds
     player: Player
-    loot_item: LootItem
+    loot_items: list[LootItem]
     extraction_zone: ExtractionZone
     projectiles: list[Projectile] = field(default_factory=list)
     backpack: Inventory = field(default_factory=Inventory)
@@ -90,12 +90,10 @@ class GameSession:
                 return
             self.enemy.move_toward(self.player.center, delta_seconds, self.bounds)
 
-        if (
-            not self.loot_item.is_collected
-            and self.player.hitbox.overlaps(self.loot_item.hitbox)
-        ):
-            self.backpack.add(self.loot_item.item_id, self.loot_item.quantity)
-            self.loot_item.is_collected = True
+        for loot in self.loot_items:
+            if not loot.is_collected and self.player.hitbox.overlaps(loot.hitbox):
+                self.backpack.add(loot.item_id, loot.quantity)
+                loot.is_collected = True
 
         if (
             self.carried_item_count > 0

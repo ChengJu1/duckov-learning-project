@@ -37,7 +37,7 @@ def win_run(game: Game, delta: float) -> None:
         )
     assert not enemy.health.is_alive
     assert game.session.status is RunStatus.ACTIVE
-    walk_to(game, game.session.loot_item.hitbox, delta)
+    walk_to(game, game.session.loot_items[0].hitbox, delta)
     assert game.session.carried_item_count == 1
     assert game.session.backpack.entries == (ItemStack("scrap", 1),)
     walk_to(game, game.session.extraction_zone.hitbox, delta)
@@ -67,7 +67,7 @@ def test_default_game_win_loss_win_cycle(fps: int) -> None:
 
     assert game.start_new_run()
     assert asdict(game.session) == fresh_state
-    walk_to(game, game.session.loot_item.hitbox, delta)
+    walk_to(game, game.session.loot_items[0].hitbox, delta)
     assert game.session.carried_item_count == 1
     for _ in range(int(15 / delta)):
         game.update(0, 0, delta)

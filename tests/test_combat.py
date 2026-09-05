@@ -13,7 +13,7 @@ def make_combat_session() -> GameSession:
         bounds=WorldBounds(240, 160),
         player=Player(20, 60, width=10, height=10, speed=100),
         enemy=Enemy(60, 60, width=10, height=10, speed=0),
-        loot_item=LootItem(100, 60, width=10, height=10),
+        loot_items=[LootItem(100, 60, width=10, height=10)],
         extraction_zone=ExtractionZone(180, 60, width=20, height=20),
     )
 
@@ -125,7 +125,7 @@ def test_dead_target_does_not_receive_attacks() -> None:
 def test_death_discards_carried_loot_and_freezes_all_session_state() -> None:
     session = make_combat_session()
     session.backpack.add("scrap", 1)
-    session.loot_item.is_collected = True
+    session.loot_items[0].is_collected = True
     session.projectiles.append(Projectile(20, 140, 1, 0, speed=0))
     session.update(0, 0, 5)
     assert session.status is RunStatus.FAILED
@@ -143,16 +143,16 @@ def test_player_dead_at_frame_start_cannot_move_fire_or_pick_up() -> None:
     assert session.status is RunStatus.FAILED
     assert session.player.x == 20
     assert session.projectiles == []
-    assert not session.loot_item.is_collected
+    assert not session.loot_items[0].is_collected
 
 
 def test_lethal_attack_prevents_pickup_on_same_frame() -> None:
     session = make_combat_session()
-    session.loot_item.x = session.player.x
+    session.loot_items[0].x = session.player.x
     session.player.health.take_damage(80)
     session.update(0, 0, 1)
     assert session.status is RunStatus.FAILED
-    assert not session.loot_item.is_collected
+    assert not session.loot_items[0].is_collected
 
 
 def test_death_at_extraction_never_adds_to_or_reduces_stash() -> None:
@@ -192,7 +192,7 @@ def test_failed_run_restart_restores_health_position_loot_and_attack_timer() -> 
     game.stash.add("scrap", 7)
     old_session = game.session
     old_session.backpack.add("scrap", 1)
-    old_session.loot_item.is_collected = True
+    old_session.loot_items[0].is_collected = True
     old_session.player.x = 30
     assert old_session.enemy is not None
     old_session.enemy.health.take_damage(25)
@@ -209,7 +209,7 @@ def test_failed_run_restart_restores_health_position_loot_and_attack_timer() -> 
     assert (session.enemy.x, session.enemy.y) == (60, 60)
     assert session.enemy.attack_progress == 0
     assert session.projectiles == []
-    assert not session.loot_item.is_collected
+    assert not session.loot_items[0].is_collected
     assert session.carried_item_count == 0
     assert game.stash_item_count == 7
     game.update(0, 0, 0.99)

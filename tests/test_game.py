@@ -8,7 +8,7 @@ def make_extractable_session() -> GameSession:
     return GameSession(
         bounds=WorldBounds(200, 100),
         player=Player(x=50, y=10, width=10, height=10),
-        loot_item=LootItem(x=50, y=10, width=10, height=10),
+        loot_items=[LootItem(x=50, y=10, width=10, height=10)],
         extraction_zone=ExtractionZone(x=50, y=10, width=20, height=20),
     )
 
@@ -17,7 +17,7 @@ def make_active_session() -> GameSession:
     return GameSession(
         bounds=WorldBounds(200, 100),
         player=Player(x=0, y=10, width=10, height=10),
-        loot_item=LootItem(x=50, y=10, width=10, height=10),
+        loot_items=[LootItem(x=50, y=10, width=10, height=10)],
         extraction_zone=ExtractionZone(x=150, y=10, width=20, height=20),
     )
 
@@ -51,7 +51,7 @@ def test_new_run_restores_session_and_preserves_stash() -> None:
     assert started is True
     assert game.session is not completed_session
     assert game.session.status is RunStatus.ACTIVE
-    assert game.session.loot_item.is_collected is False
+    assert game.session.loot_items[0].is_collected is False
     assert game.session.carried_item_count == 0
     assert game.stash_item_count == 1
 

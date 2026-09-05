@@ -12,7 +12,7 @@ def make_session(
     return GameSession(
         bounds=WorldBounds(200, 100),
         player=Player(x=player_x, y=10, width=10, height=10, speed=100),
-        loot_item=LootItem(x=loot_x, y=10, width=10, height=10),
+        loot_items=[LootItem(x=loot_x, y=10, width=10, height=10)],
         extraction_zone=ExtractionZone(
             x=extraction_x, y=10, width=20, height=20
         ),
@@ -24,7 +24,7 @@ def test_item_is_not_collected_without_overlap() -> None:
 
     session.update(0, 0, 0)
 
-    assert session.loot_item.is_collected is False
+    assert session.loot_items[0].is_collected is False
     assert session.carried_item_count == 0
 
 
@@ -33,7 +33,7 @@ def test_player_collects_item_after_moving_into_it() -> None:
 
     session.update(1, 0, 0.5)
 
-    assert session.loot_item.is_collected is True
+    assert session.loot_items[0].is_collected is True
     assert session.carried_item_count == 1
 
 
@@ -43,7 +43,7 @@ def test_collected_item_cannot_be_counted_twice() -> None:
     session.update(0, 0, 0)
     session.update(0, 0, 0)
 
-    assert session.loot_item.is_collected is True
+    assert session.loot_items[0].is_collected is True
     assert session.carried_item_count == 1
 
 
@@ -52,7 +52,7 @@ def test_touching_edges_does_not_count_as_overlap() -> None:
 
     session.update(0, 0, 0)
 
-    assert session.loot_item.is_collected is False
+    assert session.loot_items[0].is_collected is False
     assert session.carried_item_count == 0
 
 
@@ -91,7 +91,7 @@ def test_extracted_run_no_longer_changes() -> None:
 
     assert session.status is RunStatus.EXTRACTED
     assert (session.player.x, session.player.y) == position_at_extraction
-    assert session.loot_item.is_collected is True
+    assert session.loot_items[0].is_collected is True
     assert session.carried_item_count == 1
 
 

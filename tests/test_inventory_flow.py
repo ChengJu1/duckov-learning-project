@@ -6,7 +6,7 @@ def make_session(item_id: str = "scrap", quantity: int = 1) -> GameSession:
     return GameSession(
         bounds=WorldBounds(200, 100),
         player=Player(0, 10, width=10, height=10, speed=100),
-        loot_item=LootItem(30, 10, width=10, height=10, item_id=item_id, quantity=quantity),
+        loot_items=[LootItem(30, 10, width=10, height=10, item_id=item_id, quantity=quantity)],
         extraction_zone=ExtractionZone(150, 10, 20, 20),
     )
 
@@ -15,7 +15,7 @@ def test_pickup_preserves_identity_and_quantity_without_duplication() -> None:
     session = make_session("wire", 3)
     session.update(1, 0, 0.3)
     session.update(0, 0, 0)
-    assert session.loot_item.is_collected
+    assert session.loot_items[0].is_collected
     assert session.backpack.entries == (ItemStack("wire", 3),)
     assert session.carried_item_count == 3
 
@@ -35,7 +35,7 @@ def test_multiple_item_types_settle_correctly_across_runs_and_survive_failure() 
     )
     for expected in expected_runs:
         game.update(1, 0, 0.3)
-        assert game.session.carried_item_count == game.session.loot_item.quantity
+        assert game.session.carried_item_count == game.session.loot_items[0].quantity
         game.update(1, 0, 1.2)
         assert game.session.status is RunStatus.EXTRACTED
         assert game.session.backpack.entries == ()
